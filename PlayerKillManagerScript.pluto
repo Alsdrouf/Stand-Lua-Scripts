@@ -1,0 +1,384 @@
+util.require_natives('2944b')
+
+local root <const> = menu.my_root()
+local allKillsRoot <const> = root:list('All Kills', {"allKills"}, "All kills between all players")
+local playersRoot <const> = root:list('Players List', {"playersKillList"}, "All players list")
+
+-- Reverse hash function
+function foundWeaponWithHash(weaponHash: int): void
+    for util.get_weapons() as weapon do
+        if weapon['hash'] == weaponHash then
+            return weapon
+        end
+    end
+end
+
+function foundVehicleWithHash(vehicleHash: int): void
+    for util.get_vehicles() as vehicle do
+        if vehicle['hash'] == vehicleHash then
+            return vehicle
+        end
+    end
+end
+
+-- Notifications manager
+pluto_class NotificationsManager
+    function __construct(): userdata
+        self.enabled = false
+        self.enabledOnGettingKilled = false
+        self.enabledOnKilling = false
+        self.enabledOnOtherKilling = false
+        self.toastMode = TOAST_DEFAULT
+
+        self.root = root:list('Notifications', {"playersManagerNotifications"}, "Manage notifications of players kill manager script")
+        self.root:toggle("Enabled", {"playersManagerEnableNotifications"}, "Enable notifications of players kill manager script", || -> self:toggle(), self.enabled)
+        self.root:toggle("Enabled on getting killed", {"playersManagerEnableNotificationsOnGettingKilled"}, "Enable notifications of players kill manager script on getting killed", || -> self:toggleOnGettingKilled(), self.enabledOnGettingKilled)
+        self.root:toggle("Enabled on killing", {"playersManagerEnableNotificationsOnKilling"}, "Enable notifications of players kill manager script on killing", || -> self:toggleOnKilling(), self.enabledOnKilling)
+        self.root:toggle("Enabled on other killing", {"playersManagerEnableNotificationsOnOtherKilling"}, "Enable notifications of players kill manager script on other killing", || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
+        self.root:list_select("Notification use", {}, "", {
+            [TOAST_ABOVE_MAP] = {"above map"},
+            [TOAST_CONSOLE] = {"console"},
+            [TOAST_CONSOLE+TOAST_DEFAULT] = {"console + default"},
+            [TOAST_FILE] = {"file"},
+            [TOAST_WEB] = {"web"},
+            [TOAST_CHAT] = {"chat"},
+            [TOAST_CHAT_TEAM] = {"chat team"},
+            [TOAST_DEFAULT] = {"default"},
+            [TOAST_LOGGER] = {"logger"},
+            [TOAST_ALL] = {"all"},
+        }, self.toastMode, |value|-> self:setToastMode(value))
+    end
+
+    function notifyKill(victim: userdata, killer: userdata, weaponName: string): ?void
+        if self.enabled then
+            if victim:isMe() and not self.enabledOnGettingKilled then
+                return;
+            end
+            if killer:isMe() and not self.enabledOnKilling then
+                return;
+            end
+            if not killer:isMe() and not victim:isMe() and not self.enabledOnOtherKilling then
+                return;
+            end
+            self:notify(killer:getPlayerName() .. " killed " .. victim:getPlayerName() .. " with " .. weaponName)
+        end
+    end
+
+    function notify(message: string): void
+        if self.enabled then
+            util.toast(message, self.toastMode)
+        end
+    end
+
+    function toggle(): void
+        self.enabled = not self.enabled
+    end
+
+    function getEnabled(): bool
+        return self.enabled
+    end
+
+    function toggleOnGettingKilled(): void
+        self.enabledOnGettingKilled = not self.enabledOnGettingKilled
+    end
+
+    function getEnabledOnGettingKilled(): bool
+        return self.enabledOnGettingKilled
+    end
+
+    function toggleOnKilling(): void
+        self.enabledOnKilling = not self.enabledOnKilling
+    end
+
+    function getEnabledOnKilling(): bool
+        return self.enabledOnKilling
+    end
+
+    function toggleOnOtherKilling(): void
+        self.enabledOnOtherKilling = not self.enabledOnOtherKilling
+    end
+
+    function getEnabledOnOtherKilling(): bool
+        return self.enabledOnOtherKilling
+    end
+
+    function setToastMode(toastMode: int): void
+        self.toastMode = toastMode
+    end
+end
+
+-- Instantiate notifications manager / static instance
+local notificationsManager = pluto_new NotificationsManager()
+
+-- Kill class
+pluto_class Kill
+    function __construct(killRoot, victim: userdata, killer: userdata, weaponHash: int): userdata
+        self.killRoot = killRoot
+        self.victim = victim
+        self.killer = killer
+        self.weaponHash = weaponHash
+
+        notificationsManager:notifyKill(self.victim, self.killer, self:getWeaponName(self.killer))
+
+        self:populateKillRoot(self.killRoot)
+    end
+
+    function populateKillRoot(killRoot): void
+        -- Populate kill root with the infos
+        local victimName = self.victim:getPlayerName()
+        local killerName = self.killer:getPlayerName()
+        killRoot:action("Killed at: " .. os.date("%H:%M:%S"), {}, "", function() end, function() end)
+        killRoot:action("Victim: " .. victimName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. victimName) end, function() end)
+        killRoot:action("Killer: " .. killerName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. killerName) end, function() end)
+        killRoot:action("Weapon: " .. self:getWeaponName(self.killer), {}, "", function() end, function() end)
+        local killerVehicle = self.killer:getPlayerCarName()
+        if(killerVehicle~=nil) then
+            killRoot:action("Killer car: " .. killerVehicle, {}, "", function() end, function() end)
+        end
+        local victimVehicle = self.victim:getPlayerCarName()
+        if(victimVehicle~=nil) then
+            killRoot:action("Victim car: " .. victimVehicle, {}, "", function() end, function() end)
+        end
+        killRoot:toggle("Killer god mode", {}, "", function() end, self.killer:isInGodMode())
+    end
+
+    function getVictim(): userdata
+        -- Get victim
+        return self.victim
+    end
+
+    function getKiller(): userdata
+        -- Get killer
+        return self.killer
+    end
+
+    function getWeaponHash(): int
+        -- Get weapon hash
+        return self.weaponHash
+    end
+
+    function isVictim(victim: userdata): bool
+        -- Check if victim is equal to the player
+        return self.victim == victim:getPlayerId()
+    end
+
+    function isKiller(killer: userdata): bool
+        -- Check if killer is equal to the player
+        return self.killer == killer:getPlayerId()
+    end
+
+    function getWeaponName(killer: userdata): string
+        -- Get weapon name
+        local weapon = foundWeaponWithHash(self.weaponHash)
+        -- If weapon is nil, return reversed hash
+        if(weapon==nil) then
+            return util.reverse_joaat(self.weaponHash)
+        end
+        -- Return weapon name from the game
+        return util.get_label_text(weapon['label_key'])
+    end
+end
+
+-- Player class
+pluto_class Player
+    function __construct(player, playersManager): userdata
+		self.player = player
+        self.ped = PLAYER.GET_PLAYER_PED(player)
+        self.playersManager = playersManager
+        self.playerKillsRoot = playersRoot:list(self:getPlayerName() .. " kills", {self:getPlayerName() .. "kills"}, "All kills of " .. self:getPlayerName())
+        self.kills = {}
+	end
+
+    function getPlayerId(): int
+        -- Get player id
+        return self.player
+    end
+
+    function getPlayerPed(): int
+        -- Get player ped
+        return self.ped
+    end
+
+    function getPlayerCar(): int
+        -- Get player vehicle
+        return players.get_vehicle_model(self.player)
+    end
+
+    function equal(player: userdata): bool
+        -- Check if player is equal to another player
+        return self.player == player:getPlayerId()
+    end
+
+    function isDead(): bool
+        -- Check if player is dead
+        return ENTITY.IS_ENTITY_DEAD(self.ped)
+    end
+
+    function isMe(): bool
+        -- Check if player is me
+        return self.player == players.user()
+    end
+
+    function isInGodMode(): bool
+        -- Check if player is in god mode
+        return players.is_godmode(self.player)
+    end
+
+    function getPlayerName(): string
+        -- Get player name
+        return players.get_name(self.player)
+    end
+
+    function getPlayerCarName(): ?string
+        -- Get player vehicle model
+        local playerVehicleModel = self:getPlayerCar()
+        -- If vehicle model is nil, return nil
+        if(playerVehicleModel==nil or playerVehicleModel==0) then
+            return nil
+        end
+        return util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(playerVehicleModel))
+    end
+
+    function destroy(): void
+        -- Delete all kills on leave
+        self.playerKillsRoot:delete()
+    end
+
+    function addPlayerKill(otherPlayer: userdata, weaponHash: int, isKiller: bool): void
+        -- write kill in the good order
+        local killer;
+        local victim;
+        local separator = " > ";
+        if isKiller then
+            killer = self
+            victim = otherPlayer
+        else
+            killer = otherPlayer
+            victim = self
+        end
+
+        -- Create kill root
+        local playerKillsKillRoot = self.playerKillsRoot:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
+        local playerKillsKillRootInStand = self.playerKillsRootInStand:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
+        -- Create kill
+        local kill = pluto_new Kill(playerKillsKillRoot, victim, killer, weaponHash)
+
+        -- Populate all kills root only if killer to avoid duplicate
+        if isKiller then
+            local allKillsKillRoot = allKillsRoot:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
+            kill:populateKillRoot(allKillsKillRoot)
+        end
+        -- Populate player kills root in player tabs
+        kill:populateKillRoot(playerKillsKillRootInStand)
+
+        -- Remember kill
+        self.kills[#self.kills + 1] = kill
+    end
+
+    function getPlayerKiller(): ?table
+        local weaponHash = memory.alloc(4)
+        -- Find killer and weapon hash
+        local killerId = NETWORK.NETWORK_GET_KILLER_OF_PLAYER(self.player, weaponHash)
+        if(killerId ~= -1) then
+            return {['killer'] = self.playersManager:getPlayer(killerId), ['weaponHash'] = memory.read_int(weaponHash)}
+        else
+            return nil
+        end
+    end
+
+    function setPlayerKillsRootInStand(root): void
+        self.playerKillsRootInStand = root
+    end
+end
+
+-- Players manager class
+pluto_class PlayersManager
+    function __construct(players): userdata
+        -- init players
+        self.players = {}
+        for players as playerId do
+            local player = pluto_new Player(playerId, self)
+            self.players[playerId] = player
+        end
+    end
+
+    function getPlayers(): table
+        return self.players
+    end
+
+    function getPlayer(playerId: int): userdata
+        return self.players[playerId]
+    end
+
+    function addPlayer(playerId: int): void
+        local player = pluto_new Player(playerId, self)
+        self.players[playerId] = player
+    end
+
+    function removePlayer(playerId: int): void
+        local player = self.players[playerId]
+        player:destroy()
+        self.players[playerId] = nil
+    end
+
+    function addPlayerKillers(): void
+        for self.players as player do
+            -- if player is dead
+            if player:isDead() then
+                -- get killer
+                local kill = player:getPlayerKiller()
+
+                -- if killer is not nil, add kill
+                if kill ~= nil then
+                    local killer = kill['killer']
+                    local weaponHash = kill['weaponHash']
+                    -- Do not duplicate kill
+                    if(killer:equal(player)) then
+                        player:addPlayerKill(killer, weaponHash, true)
+                    else
+                        player:addPlayerKill(killer, weaponHash, false)
+                        killer:addPlayerKill(player, weaponHash, true)
+                    end
+                end
+            end
+        end
+    end
+
+    function getPlayersList()
+        local playersList = {}
+        for self.players as player do
+            playersList[#playersList + 1] = player:getPlayerName() .. " kills"
+        end
+        return playersList
+    end
+end
+
+-- Instantiate players manager / static instance
+local playersManager = pluto_new PlayersManager(players.list())
+
+-- Command builder to get player kills in player tabs
+function commandBuilder(playerId: int, root)
+    local player = playersManager:getPlayer(playerId)
+    root:divider(SCRIPT_NAME)
+    local killList = root:list('Kills', {"kills"}, "Kills list of " .. player:getPlayerName())
+    player:setPlayerKillsRootInStand(killList)
+    return true
+end
+
+-- Add players to players manager
+players.on_join(|playerId| -> playersManager:addPlayer(playerId))
+
+-- Remove players from players manager
+players.on_leave(|playerId| -> playersManager:removePlayer(playerId))
+
+-- Add command hook to get player kills in player tabs
+players.add_command_hook(commandBuilder)
+
+-- Add tick handler to get player kills
+util.create_tick_handler(function()
+    playersManager:addPlayerKillers()
+    return true
+end)
+
+-- Add this just in case
+util.keep_running()
