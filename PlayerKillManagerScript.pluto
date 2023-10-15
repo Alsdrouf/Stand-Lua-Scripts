@@ -1,5 +1,7 @@
 util.require_natives('2944b')
 
+local CEventNetworkEntityDamage = 186
+
 local root <const> = menu.my_root()
 local allKillsRoot <const> = root:list('All Kills', {"allKills"}, "All kills between all players")
 local playersRoot <const> = root:list('Players List', {"playersKillList"}, "All players list")
@@ -110,15 +112,46 @@ end
 -- Instantiate notifications manager / static instance
 local notificationsManager = pluto_new NotificationsManager()
 
+pluto_class EventManager
+    function __construct(): userdata
+        self.events = {}
+    end
+
+    function addEventListener(eventId: int, eventGroup: int, eventDataSize: int, callback: function): void
+        if not self.events[eventId] then
+            self.events[eventId] = {}
+        end
+        self.events[eventId][#self.events[eventId] + 1] = {['eventGroup'] = eventGroup, ['eventDataSize'] = eventDataSize, ['callback'] = callback}
+    end
+
+    function watch()
+        for eventNum = 0, SCRIPT.GET_NUMBER_OF_EVENTS(1) - 1 do
+            local eventId = SCRIPT.GET_EVENT_AT_INDEX(1, eventNum)
+            if self.events[eventId] then
+                for self.events[eventId] as event do
+                    local eventData = memory.alloc(event['eventDataSize'] * 8)
+                    if SCRIPT.GET_EVENT_DATA(1, eventNum, eventData, event['eventDataSize']) then
+                        event['callback'](eventData)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Instantiate event manager / static instance
+local eventManager = pluto_new EventManager()
+
 -- Kill class
 pluto_class Kill
-    function __construct(killRoot, victim: userdata, killer: userdata, weaponHash: int): userdata
+    function __construct(killRoot, victim: userdata, killer: userdata, weaponHash: int, damages: userdata): userdata
         self.killRoot = killRoot
         self.victim = victim
         self.killer = killer
         self.weaponHash = weaponHash
+        self.damages = damages
 
-        notificationsManager:notifyKill(self.victim, self.killer, self:getWeaponName(self.killer))
+        notificationsManager:notifyKill(self.victim, self.killer, self:getWeaponName())
 
         self:populateKillRoot(self.killRoot)
     end
@@ -130,7 +163,7 @@ pluto_class Kill
         killRoot:action("Killed at: " .. os.date("%H:%M:%S"), {}, "", function() end, function() end)
         killRoot:action("Victim: " .. victimName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. victimName) end, function() end)
         killRoot:action("Killer: " .. killerName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. killerName) end, function() end)
-        killRoot:action("Weapon: " .. self:getWeaponName(self.killer), {}, "", function() end, function() end)
+        killRoot:action("Weapon: " .. self:getWeaponName(), {}, "", function() end, function() end)
         local killerVehicle = self.killer:getPlayerCarName()
         if(killerVehicle~=nil) then
             killRoot:action("Killer car: " .. killerVehicle, {}, "", function() end, function() end)
@@ -140,6 +173,12 @@ pluto_class Kill
             killRoot:action("Victim car: " .. victimVehicle, {}, "", function() end, function() end)
         end
         killRoot:toggle("Killer god mode", {}, "", function() end, self.killer:isInGodMode())
+        local damagesRoot = killRoot:list("Damage infos", {}, "damage infos")
+        util.execute_in_os_thread(function()
+            for self.damages as damage do
+                damage:populateRoot(damagesRoot)
+            end
+        end)
     end
 
     function getVictim(): userdata
@@ -167,7 +206,56 @@ pluto_class Kill
         return self.killer == killer:getPlayerId()
     end
 
-    function getWeaponName(killer: userdata): string
+    function getWeaponName(): string
+        -- Get weapon name
+        local weapon = foundWeaponWithHash(self.weaponHash)
+        -- If weapon is nil, return reversed hash
+        if(weapon==nil) then
+            return util.reverse_joaat(self.weaponHash)
+        end
+        -- Return weapon name from the game
+        return util.get_label_text(weapon['label_key'])
+    end
+end
+
+-- Damage class
+pluto_class Damage
+    function __construct(fromPlayer: userdata, toPlayer: userdata, weaponHash: int, damage: int): userdata
+        self.fromPlayer = fromPlayer
+        self.toPlayer = toPlayer
+        self.damageAmount = damage
+        self.weaponHash = weaponHash
+    end
+
+    function getFromPlayer(): userdata
+        -- Get from player
+        return self.fromPlayer
+    end
+
+    function getToPlayer(): userdata
+        -- Get to player
+        return self.toPlayer
+    end
+
+    function getDamageAmount(): int
+        -- Get damage amount
+        return self.damageAmount
+    end
+
+    function getWeaponHash(): int
+        -- Get weapon hash
+        return self.weaponHash
+    end
+
+    function populateRoot(root: userdata): void
+        local rootList = root:list(self.fromPlayer:getPlayerName() .. " > " .. self.toPlayer:getPlayerName() .. " " .. string.format("%.2f", self.damageAmount), {}, "Damage infos")
+        rootList:action("From: " .. self.fromPlayer:getPlayerName(), {}, "Go to player tabs", function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
+        rootList:action("To: " .. self.toPlayer:getPlayerName(), {}, "Go to player tabs", function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
+        rootList:action("Weapon: " .. self:getWeaponName(), {}, "", function() end, function() end)
+        rootList:action("Damage amount: " .. self.damageAmount, {}, "", function() end, function() end)
+    end
+
+    function getWeaponName(): string
         -- Get weapon name
         local weapon = foundWeaponWithHash(self.weaponHash)
         -- If weapon is nil, return reversed hash
@@ -184,6 +272,7 @@ pluto_class Player
     function __construct(player, playersManager): userdata
 		self.player = player
         self.ped = PLAYER.GET_PLAYER_PED(player)
+        self.damageBeforeDeath = {}
         self.playersManager = playersManager
         self.playerKillsRoot = playersRoot:list(self:getPlayerName() .. " kills", {self:getPlayerName() .. "kills"}, "All kills of " .. self:getPlayerName())
         self.kills = {}
@@ -244,7 +333,24 @@ pluto_class Player
         self.playerKillsRoot:delete()
     end
 
-    function addPlayerKill(otherPlayer: userdata, weaponHash: int, isKiller: bool): void
+    function addPlayerDamage(otherPlayer: userdata, weaponHash: int, damage: int, isKiller: bool): void
+        -- write damage in the good order
+        local killer;
+        local victim;
+        local separator = " > ";
+        if isKiller then
+            killer = self
+            victim = otherPlayer
+        else
+            killer = otherPlayer
+            victim = self
+        end
+        local damage = pluto_new Damage(killer, victim, weaponHash, damage)
+        self.damageBeforeDeath[#self.damageBeforeDeath + 1] = damage
+    end
+
+    function addPlayerKill(otherPlayer: userdata, weaponHash: int, damage: int, isKiller: bool): void
+        self:addPlayerDamage(otherPlayer, weaponHash, damage, isKiller)
         -- write kill in the good order
         local killer;
         local victim;
@@ -261,7 +367,7 @@ pluto_class Player
         local playerKillsKillRoot = self.playerKillsRoot:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
         local playerKillsKillRootInStand = self.playerKillsRootInStand:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
         -- Create kill
-        local kill = pluto_new Kill(playerKillsKillRoot, victim, killer, weaponHash)
+        local kill = pluto_new Kill(playerKillsKillRoot, victim, killer, weaponHash, self.damageBeforeDeath)
 
         -- Populate all kills root only if killer to avoid duplicate
         if isKiller then
@@ -273,6 +379,7 @@ pluto_class Player
 
         -- Remember kill
         self.kills[#self.kills + 1] = kill
+        self.damageBeforeDeath = {}
     end
 
     function getPlayerKiller(): ?table
@@ -351,6 +458,39 @@ pluto_class PlayersManager
         end
         return playersList
     end
+
+    function manageDamageEvent(eventData)
+        local victim = memory.read_int(eventData)
+        local attacker = memory.read_int(eventData + 1 * 8)
+        local damage = memory.read_float(eventData + 2 * 8)
+        local victimDestroyed = memory.read_int(eventData + 5*8)
+        local weaponUsedHash = memory.read_int(eventData + 6 * 8)
+
+        if victim ~= -1 and attacker ~= -1 then
+            local victimId = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(victim)
+            local attackerId = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(attacker)
+            if attackerId ~= -1 and victimId ~= -1 then
+                local killer = self:getPlayer(attackerId)
+                local victim = self:getPlayer(victimId)
+                if victimDestroyed == 1 then
+                    if(killer:equal(victim)) then
+                        killer:addPlayerKill(victim, weaponUsedHash, damage, true)
+                    else
+                        victim:addPlayerKill(killer, weaponUsedHash, damage, false)
+                        killer:addPlayerKill(victim, weaponUsedHash, damage, true)
+                    end
+                elseif victimDestroyed == 0 then
+                    if(killer:equal(victim)) then
+                        killer:addPlayerDamage(victim, weaponUsedHash, damage, true)
+                    else
+                        victim:addPlayerDamage(killer, weaponUsedHash, damage, false)
+                        killer:addPlayerDamage(victim, weaponUsedHash, damage, true)
+                    end
+                    -- Will add player damage history
+                end
+            end
+        end
+    end
 end
 
 -- Instantiate players manager / static instance
@@ -374,10 +514,11 @@ players.on_leave(|playerId| -> playersManager:removePlayer(playerId))
 -- Add command hook to get player kills in player tabs
 players.add_command_hook(commandBuilder)
 
+eventManager:addEventListener(CEventNetworkEntityDamage, 1, 13, |eventData| -> playersManager:manageDamageEvent(eventData))
+
 -- Add tick handler to get player kills
 util.create_tick_handler(function()
-    playersManager:addPlayerKillers()
-    return true
+    eventManager:watch()
 end)
 
 -- Add this just in case
