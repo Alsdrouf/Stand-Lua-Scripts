@@ -3,8 +3,12 @@ util.require_natives('2944b')
 local CEventNetworkEntityDamage = 186
 
 local root <const> = menu.my_root()
-local allKillsRoot <const> = root:list('All Kills', {"allKills"}, "All kills between all players")
-local playersRoot <const> = root:list('Players List', {"playersKillList"}, "All players list")
+local allKillsRoot
+local playersRoot
+local notificationsManager
+local settingsManager
+local eventManager
+local playersManager
 
 -- Reverse hash function
 function foundWeaponWithHash(weaponHash: int): void
@@ -23,6 +27,136 @@ function foundVehicleWithHash(vehicleHash: int): void
     end
 end
 
+-- Translation
+pluto_class Translation
+    function __construct(lang: string, fallback: string): userdata
+        self.lang = lang
+        self.fallback = fallback
+        self.translations = {}
+    end
+
+    function setLang(lang: string): void
+        self.lang = lang
+    end
+
+    function getLang(): string
+        return self.lang
+    end
+
+    function _translate(key: string, lang: string, params): string
+        if not lang in self.translations or not key in self.translations[lang] then
+            if lang == self.fallback then
+                util.toast('Missing translation key : ' .. key)
+                return key
+            else
+                return self:_translate(key, self.fallback, params)
+            end
+        end
+        local translation = self.translations[lang][key]
+        if params ~= nil then
+            for key, value in params do
+                translation = translation:gsub('%%' .. key .. '%%', value)
+            end
+        end
+        return translation
+    end
+
+    function translate(key: string, params): string
+        return self:_translate(key, self.lang, params)
+    end
+
+    function register(key: string, lang: string, translation: string): void
+        if not lang in self.translations then
+            self.translations[lang] = {}
+        end
+        self.translations[lang][key] = translation
+    end
+end
+
+enum Lang begin
+    ENGLISH,
+    SPANISH
+end
+
+local t = pluto_new Translation(Lang.ENGLISH, Lang.ENGLISH)
+
+-- English
+--- Usefull
+t:register('goToPlayerTabs', Lang.ENGLISH, 'Go to player tabs')
+t:register('killRoot', Lang.ENGLISH, '%player1% > %player2%')
+
+--- Notifications
+t:register('notifications', Lang.ENGLISH, 'Notifications')
+t:register('notifications.description', Lang.ENGLISH, 'Manage notifications of players kill manager script')
+t:register('enabled', Lang.ENGLISH, 'Enabled')
+t:register('enabled.description', Lang.ENGLISH, 'Enable notifications of players kill manager script')
+t:register('enabledOnGettingKilled', Lang.ENGLISH, 'Enabled on getting killed')
+t:register('enabledOnGettingKilled.description', Lang.ENGLISH, 'Enable notifications of players kill manager script on getting killed')
+t:register('enabledOnKilling', Lang.ENGLISH, 'Enabled on killing')
+t:register('enabledOnKilling.description', Lang.ENGLISH, 'Enable notifications of players kill manager script on killing')
+t:register('enableOnOtherKilling', Lang.ENGLISH, 'Enabled on other killing')
+t:register('enableOnOtherKilling.description', Lang.ENGLISH, 'Enable notifications of players kill manager script on other killing')
+t:register('notificationChannel', Lang.ENGLISH, 'Notification channel')
+t:register('notificationChannel.description', Lang.ENGLISH, 'Notification channel of players kill manager script')
+
+--- Kills
+t:register('allKills', Lang.ENGLISH, 'All kills')
+t:register('allKills.description', Lang.ENGLISH, 'All kills between players')
+t:register('kills', Lang.ENGLISH, 'Kills')
+t:register('kills.description', Lang.ENGLISH, 'Manage kills of players kill manager script')
+t:register('allKillsOf', Lang.ENGLISH, 'All kills of %player%')
+t:register('killsListOf', Lang.ENGLISH, 'Kills list of %player%')
+t:register('playerKills', Lang.ENGLISH, '%player% kills')
+
+t:register('killedAt', Lang.ENGLISH, 'Killed at: %date%')
+t:register('victim', Lang.ENGLISH, 'Victim: %player%')
+t:register('killer', Lang.ENGLISH, 'Killer: %player%')
+t:register('weapon', Lang.ENGLISH, 'Weapon: %weapon%')
+t:register('killerCar', Lang.ENGLISH, 'Killer car: %vehicle%')
+t:register('victimCar', Lang.ENGLISH, 'Victim car: %vehicle%')
+t:register('killerGodMode', Lang.ENGLISH, 'Killer god mode')
+
+--- Damages
+t:register('damageInfos', Lang.ENGLISH, 'Damage infos')
+t:register('damageInfos.description', Lang.ENGLISH, 'View damage infos of the kill')
+t:register('from', Lang.ENGLISH, 'From: %player%')
+t:register('to', Lang.ENGLISH, 'To: %player%')
+t:register('damageAmount', Lang.ENGLISH, 'Damage amount: %damage%')
+t:register('damageRoot', Lang.ENGLISH, '%player1% > %player2% : %damage%')
+
+--- Players
+t:register('playersList', Lang.ENGLISH, 'Players list')
+t:register('playersList.description', Lang.ENGLISH, 'Manage players list')
+
+--- Settings
+t:register('settings', Lang.ENGLISH, 'Settings')
+t:register('settings.description', Lang.ENGLISH, 'Manage settings of players kill manager script')
+t:register('debug', Lang.ENGLISH, 'Debug')
+t:register('debug.description', Lang.ENGLISH, 'Enable debug of players kill manager script')
+t:register('onlyMe', Lang.ENGLISH, 'Only me')
+t:register('onlyMe.description', Lang.ENGLISH, 'Only log kill of yourself')
+t:register('enableDeleteButton', Lang.ENGLISH, 'Enable delete button')
+t:register('enableDeleteButton.description', Lang.ENGLISH, 'Enable delete button')
+t:register('reload', Lang.ENGLISH, 'Reload script')
+t:register('reload.description', Lang.ENGLISH, 'Reload players kill manager script')
+
+t:register('killedWith', Lang.ENGLISH, '%player1% killed %player2% with %weapon%')
+
+--- Commands
+t:register('commands.allKills', Lang.ENGLISH, 'allKills')
+t:register('commands.playersKillList', Lang.ENGLISH, 'playersKillList')
+t:register('commands.playersManager', Lang.ENGLISH, 'playersManager')
+t:register('commands.playersManagerNotifications', Lang.ENGLISH, 'playersManagerNotifications')
+t:register('commands.playersManagerEnableNotifications', Lang.ENGLISH, 'playersManagerEnableNotifications')
+t:register('commands.playersManagerEnableNotificationsOnGettingKilled', Lang.ENGLISH, 'playersManagerEnableNotificationsOnGettingKilled')
+t:register('commands.playersManagerEnableNotificationsOnKilling', Lang.ENGLISH, 'playersManagerEnableNotificationsOnKilling')
+t:register('commands.playersManagerEnableNotificationsOnOtherKilling', Lang.ENGLISH, 'playersManagerEnableNotificationsOnOtherKilling')
+t:register('commands.playersManagerSettings', Lang.ENGLISH, 'playersManagerSettings')
+t:register('commands.playersManagerOnlyMe', Lang.ENGLISH, 'playersManagerOnlyMe')
+t:register('commands.playersManagerEnableDeleteButton', Lang.ENGLISH, 'playersManagerEnableDeleteButton')
+t:register('commands.kills', Lang.ENGLISH, 'kills')
+t:register('commands.playerKills', Lang.ENGLISH, 'playerKills')
+
 -- Notifications manager
 pluto_class NotificationsManager
     function __construct(): userdata
@@ -32,12 +166,16 @@ pluto_class NotificationsManager
         self.enabledOnOtherKilling = false
         self.toastMode = TOAST_DEFAULT
 
-        self.root = root:list('Notifications', {"playersManagerNotifications"}, "Manage notifications of players kill manager script")
-        self.root:toggle("Enabled", {"playersManagerEnableNotifications"}, "Enable notifications of players kill manager script", || -> self:toggle(), self.enabled)
-        self.root:toggle("Enabled on getting killed", {"playersManagerEnableNotificationsOnGettingKilled"}, "Enable notifications of players kill manager script on getting killed", || -> self:toggleOnGettingKilled(), self.enabledOnGettingKilled)
-        self.root:toggle("Enabled on killing", {"playersManagerEnableNotificationsOnKilling"}, "Enable notifications of players kill manager script on killing", || -> self:toggleOnKilling(), self.enabledOnKilling)
-        self.root:toggle("Enabled on other killing", {"playersManagerEnableNotificationsOnOtherKilling"}, "Enable notifications of players kill manager script on other killing", || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
-        self.root:list_select("Notification use", {}, "", {
+        self:populateRoot()
+    end
+
+    function populateRoot(): void
+        self.root = root:list(t:translate('notifications'), {t:translate('commands.playersManagerNotifications')}, t:translate('notifications.description'))
+        self.root:toggle(t:translate('enabled'), {t:translate('commands.playersManagerEnableNotifications')}, t:translate('enabled.description'), || -> self:toggle(), self.enabled)
+        self.root:toggle(t:translate('enabledOnGettingKilled'), {t:translate('commands.playersManagerEnableNotificationsOnGettingKilled')}, t:translate('enabledOnGettingKilled.description'), || -> self:toggleOnGettingKilled(), self.enabledOnGettingKilled)
+        self.root:toggle(t:translate('enabledOnKilling'), {t:translate('commands.playersManagerEnableNotificationsOnKilling')}, t:translate('enabledOnKilling.description'), || -> self:toggleOnKilling(), self.enabledOnKilling)
+        self.root:toggle(t:translate('enableOnOtherKilling'), {t:translate('commands.playersManagerEnableNotificationsOnOtherKilling')}, t:translate('enableOnOtherKilling.description'), || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
+        self.root:list_select(t:translate('notificationChannel'), {}, "", {
             [TOAST_ABOVE_MAP] = {"above map"},
             [TOAST_CONSOLE] = {"console"},
             [TOAST_CONSOLE+TOAST_DEFAULT] = {"console + default"},
@@ -51,6 +189,15 @@ pluto_class NotificationsManager
         }, self.toastMode, |value|-> self:setToastMode(value))
     end
 
+    function destroy(): void
+        self.root:delete()
+    end
+
+    function reload(): void
+        self:destroy()
+        self:populateRoot()
+    end
+
     function notifyKill(victim: userdata, killer: userdata, weaponName: string): ?void
         if self.enabled then
             if victim:isMe() and not self.enabledOnGettingKilled then
@@ -62,7 +209,7 @@ pluto_class NotificationsManager
             if not killer:isMe() and not victim:isMe() and not self.enabledOnOtherKilling then
                 return;
             end
-            self:notify(killer:getPlayerName() .. " killed " .. victim:getPlayerName() .. " with " .. weaponName)
+            self:notify(t:translate('killedWith', {player1 = killer:getPlayerName(), player2 = victim:getPlayerName(), weapon = weaponName}))
         end
     end
 
@@ -109,18 +256,31 @@ pluto_class NotificationsManager
     end
 end
 
--- Instantiate notifications manager / static instance
-local notificationsManager = pluto_new NotificationsManager()
-
 pluto_class SettingsManager
     function __construct(): userdata
-        self.settingsRoot = root:list('Settings', {"playersManagerSettings"}, "Manage settings of players kill manager script")
-        -- self.settingsRoot:toggle("Debug", {"playersManagerDebug"}, "Enable debug of players kill manager script", || -> self:toggleDebug(), self.debug)
-        self.settingsRoot:toggle("Only me", {"playersManagerOnlyMe"}, "Only log kill of yourself", || -> self:toggleOnlyMe(), self.onlyMe)
-        self.settingsRoot:toggle("Enable delete button", {"playersManagerEnableDeleteButton"}, "Enable delete button", || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
         self.debug = false
         self.onlyMe = false
         self.enableDeleteButton = false
+        self.language = Lang.ENGLISH
+        self:populateRoot()
+    end
+
+    function populateRoot(): void
+        self.settingsRoot = root:list(t:translate('settings'), {t:translate('commands.playersManagerSettings')}, t:translate('settings.description'))
+        -- self.settingsRoot:toggle("Debug", {"playersManagerDebug"}, "Enable debug of players kill manager script", || -> self:toggleDebug(), self.debug)
+        self.settingsRoot:toggle(t:translate('onlyMe'), {t:translate('commands.playersManagerOnlyMe')}, t:translate('onlyMe.description'), || -> self:toggleOnlyMe(), self.onlyMe)
+        self.settingsRoot:toggle(t:translate('enableDeleteButton'), {t:translate('commands.playersManagerEnableDeleteButton')}, t:translate('enableDeleteButton.description'), || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
+        self.settingsRoot:list_select('Language', {'playersManagerLang'}, "Set languages", {[Lang.ENGLISH] = {"english"}, [Lang.SPANISH] = {"spanish"}}, self.language, |value|-> self:setLanguage(value))
+        self.settingsRoot:action(t:translate('reload'), {}, t:translate('reload.description'), || -> util.restart_script())
+    end
+
+    function destroy(): void
+        self.settingsRoot:delete()
+    end
+
+    function reload(): void
+        self:destroy()
+        self:populateRoot()
     end
 
     function toggleDebug(): void
@@ -146,13 +306,24 @@ pluto_class SettingsManager
     function getEnableDeleteButton(): bool
         return self.enableDeleteButton
     end
-end
 
-local settingsManager = pluto_new SettingsManager()
+    function setLanguage(language: int): void
+        self.language = language
+        t:setLang(language)
+        reload()
+    end
+end
 
 pluto_class EventManager
     function __construct(): userdata
         self.events = {}
+    end
+
+    function destroy(): void
+    end
+
+    function reload(): void
+        self:destroy()
     end
 
     function addEventListener(eventId: int, eventGroup: int, eventDataSize: int, callback: function): void
@@ -177,13 +348,10 @@ pluto_class EventManager
     end
 end
 
--- Instantiate event manager / static instance
-local eventManager = pluto_new EventManager()
-
 -- Kill class
 pluto_class Kill
     function __construct(killRootParent: userdata, victim: userdata, killer: userdata, weaponHash: int, damages: userdata): userdata
-        self.killRoot = menu.shadow_root():list(killer:getPlayerName() .. " > " .. victim:getPlayerName(), {}, "", || -> self:addOrRemoveDeleteAction())
+        self.killRoot = menu.shadow_root():list(t:translate('killRoot', {player1 = killer:getPlayerName(), player2 = victim:getPlayerName()}), {}, "", || -> self:addOrRemoveDeleteAction())
         local firstParentChild = killRootParent:getChildren()[1]
         if firstParentChild ~= nil then
             self.killRoot = menu.attach_before(firstParentChild, self.killRoot)
@@ -206,20 +374,20 @@ pluto_class Kill
         -- Populate kill root with the infos
         local victimName = self.victim:getPlayerName()
         local killerName = self.killer:getPlayerName()
-        killRoot:action("Killed at: " .. os.date("%H:%M:%S"), {}, "", function() end, function() end)
-        killRoot:action("Victim: " .. victimName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. victimName) end, function() end)
-        killRoot:action("Killer: " .. killerName, {}, "Go to player tabs", function() menu.trigger_commands('p ' .. killerName) end, function() end)
-        killRoot:action("Weapon: " .. self:getWeaponName(), {}, "", function() end, function() end)
+        killRoot:action(t:translate('killedAt', {date = os.date("%H:%M:%S")}), {}, "", function() end, function() end)
+        killRoot:action(t:translate('victim', {player = victimName}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. victimName) end, function() end)
+        killRoot:action(t:translate('killer', {player = killerName}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. killerName) end, function() end)
+        killRoot:action(t:translate('weapon', {weapon = self:getWeaponName()}), {}, "", function() end, function() end)
         local killerVehicle = self.killer:getPlayerCarName()
         if(killerVehicle~=nil) then
-            killRoot:action("Killer car: " .. killerVehicle, {}, "", function() end, function() end)
+            killRoot:action(t:translate('killerCar', {vehicle = killerVehicle}), {}, "", function() end, function() end)
         end
         local victimVehicle = self.victim:getPlayerCarName()
         if(victimVehicle~=nil) then
-            killRoot:action("Victim car: " .. victimVehicle, {}, "", function() end, function() end)
+            killRoot:action(t:translate('victimCar', {vehicle = victimVehicle}), {}, "", function() end, function() end)
         end
-        killRoot:toggle("Killer god mode", {}, "", function() end, self.killer:isInGodMode())
-        local damagesRoot = killRoot:list("Damage infos", {}, "damage infos")
+        killRoot:toggle(t:translate('killerGodMode'), {}, "", function() end, self.killer:isInGodMode())
+        local damagesRoot = killRoot:list(t:translate('damageInfos'), {}, t:translate('damageInfos.description'))
         self:addOrRemoveDeleteAction()
         util.execute_in_os_thread(function()
             for self.damages as damage do
@@ -231,7 +399,7 @@ pluto_class Kill
     function addOrRemoveDeleteAction(): void
         if settingsManager:getEnableDeleteButton() then
             if(self.deleteAction==nil) then
-                self.deleteAction = self.killRoot:action("Delete", {}, "", function() self:destroy() end, function() end)
+                self.deleteAction = self.killRoot:action(t:translate('delete'), {}, "", function() self:destroy() end, function() end)
             end
         else
             if(self.deleteAction~=nil) then
@@ -333,11 +501,11 @@ pluto_class Damage
     end
 
     function populateRoot(root: userdata): void
-        local rootList = root:list(self.fromPlayer:getPlayerName() .. " > " .. self.toPlayer:getPlayerName() .. " " .. string.format("%.2f", self.damageAmount), {}, "Damage infos")
-        rootList:action("From: " .. self.fromPlayer:getPlayerName(), {}, "Go to player tabs", function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
-        rootList:action("To: " .. self.toPlayer:getPlayerName(), {}, "Go to player tabs", function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
-        rootList:action("Weapon: " .. self:getWeaponName(), {}, "", function() end, function() end)
-        rootList:action("Damage amount: " .. self.damageAmount, {}, "", function() end, function() end)
+        local rootList = root:list(t:translate('damageRoot', {player1 = self.fromPlayer:getPlayerName(), player2 = self.toPlayer:getPlayerName(), damage = string.format("%.2f", self.damageAmount)}), {}, t:translate('damageInfos'))
+        rootList:action(t:translate('from', {player = self.fromPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
+        rootList:action(t:translate('to', {player = self.toPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
+        rootList:action(t:translate('weapon', {weapon = self:getWeaponName()}), {}, "", function() end, function() end)
+        rootList:action(t:translate('damageAmount', {damage = self.damageAmount}), {}, "", function() end, function() end)
     end
 
     function getWeaponName(): string
@@ -359,9 +527,20 @@ pluto_class Player
         self.ped = PLAYER.GET_PLAYER_PED(player)
         self.damageBeforeDeath = {}
         self.playersManager = playersManager
-        self.playerKillsRoot = playersRoot:list(self:getPlayerName() .. " kills", {self:getPlayerName() .. "kills"}, "All kills of " .. self:getPlayerName())
         self.kills = {}
+        self:populateRoot()
 	end
+
+    function populateRoot(): void
+        self.playerKillsRoot = playersRoot:list(t:translate('playerKills', {player = self:getPlayerName()}), {t:translate('commands.playerKills', {player = self:getPlayerName()})}, t:translate('allKillsOf', {player = self:getPlayerName()}))
+    end
+
+    function reload(): void
+        for self.kills as kill do
+            kill:destroy()
+        end
+        self.kills = {}
+    end
 
     function getPlayerId(): int
         -- Get player id
@@ -446,11 +625,11 @@ pluto_class Player
             victim = self
         end
         -- Create kill
-        local kill = pluto_new Kill(self.playerKillsRoot, victim, killer, weaponHash, self.damageBeforeDeath)
-
-        -- Populate all kills root only if killer to avoid duplicate
+        local kill;
         if isKiller then
-            kill:link(allKillsRoot)
+            kill = pluto_new Kill(allKillsRoot, victim, killer, weaponHash, self.damageBeforeDeath)
+        else
+            kill = pluto_new Kill(self.playerKillsRoot, victim, killer, weaponHash, self.damageBeforeDeath)
         end
         -- Populate player kills root in player tabs
         kill:link(self.playerKillsRootInStand)
@@ -484,6 +663,16 @@ pluto_class PlayersManager
         for players as playerId do
             local player = pluto_new Player(playerId, self)
             self.players[playerId] = player
+        end
+    end
+
+    function destroy()
+    end
+
+    function reload()
+        self:destroy()
+        for self.players as player do
+            player:reload()
         end
     end
 
@@ -532,7 +721,7 @@ pluto_class PlayersManager
     function getPlayersList()
         local playersList = {}
         for self.players as player do
-            playersList[#playersList + 1] = player:getPlayerName() .. " kills"
+            playersList[#playersList + 1] = t:translate('playerKills', {player = player:getPlayerName()})
         end
         return playersList
     end
@@ -575,33 +764,64 @@ pluto_class PlayersManager
     end
 end
 
--- Instantiate players manager / static instance
-local playersManager = pluto_new PlayersManager(players.list())
+function reload()
+    local oldAllKillsRoot = allKillsRoot
+    allKillsRoot = root:list(t:translate('allKills'), {t:translate('commands.allKills')}, t:translate('allKills.description'))
+    local oldPlayersRoot = playersRoot
+    playersRoot = root:list(t:translate('playersList'), {t:translate('commands.playersKillList')}, t:translate('playersList.description'))
 
--- Command builder to get player kills in player tabs
-function commandBuilder(playerId: int, root)
-    local player = playersManager:getPlayer(playerId)
-    root:divider(SCRIPT_NAME)
-    local killList = root:list('Kills', {"kills"}, "Kills list of " .. player:getPlayerName())
-    player:setPlayerKillsRootInStand(killList)
-    return true
+    notificationsManager:reload()
+    settingsManager:reload()
+    eventManager:reload()
+    playersManager:reload()
+
+    oldAllKillsRoot:delete()
+    oldPlayersRoot:delete()
 end
 
--- Add players to players manager
-players.on_join(|playerId| -> playersManager:addPlayer(playerId))
+function init()
+    allKillsRoot = root:list(t:translate('allKills'), {t:translate('commands.allKills')}, t:translate('allKills.description'))
+    playersRoot = root:list(t:translate('playersList'), {t:translate('commands.playersKillList')}, t:translate('playersList.description'))
 
--- Remove players from players manager
-players.on_leave(|playerId| -> playersManager:removePlayer(playerId))
+    -- Instantiate notifications manager / static instance
+    notificationsManager = pluto_new NotificationsManager()
 
--- Add command hook to get player kills in player tabs
-players.add_command_hook(commandBuilder)
+    -- Instantiate settings manager / static instance
+    settingsManager = pluto_new SettingsManager(reload)
 
-eventManager:addEventListener(CEventNetworkEntityDamage, 1, 13, |eventData| -> playersManager:manageDamageEvent(eventData))
+    -- Instantiate event manager / static instance
+    eventManager = pluto_new EventManager()
 
--- Add tick handler to get player kills
-util.create_tick_handler(function()
-    eventManager:watch()
-end)
+    -- Instantiate players manager / static instance
+    playersManager = pluto_new PlayersManager(players.list())
+
+    -- Command builder to get player kills in player tabs
+    function commandBuilder(playerId: int, root)
+        local player = playersManager:getPlayer(playerId)
+        root:divider(SCRIPT_NAME)
+        local killList = root:list(t:translate('kills'), {t:translate('commands.kills')}, t:translate('killsListOf', {player = player:getPlayerName()}))
+        player:setPlayerKillsRootInStand(killList)
+        return true
+    end
+
+    -- Add players to players manager
+    players.on_join(|playerId| -> playersManager:addPlayer(playerId))
+
+    -- Remove players from players manager
+    players.on_leave(|playerId| -> playersManager:removePlayer(playerId))
+
+    -- Add command hook to get player kills in player tabs
+    players.add_command_hook(commandBuilder)
+
+    eventManager:addEventListener(CEventNetworkEntityDamage, 1, 13, |eventData| -> playersManager:manageDamageEvent(eventData))
+    
+    -- Add tick handler to get player kills
+    util.create_tick_handler(function()
+        eventManager:watch()
+    end)
+end
+
+init()
 
 -- Add this just in case
 util.keep_running()
