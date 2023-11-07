@@ -112,6 +112,44 @@ end
 -- Instantiate notifications manager / static instance
 local notificationsManager = pluto_new NotificationsManager()
 
+pluto_class SettingsManager
+    function __construct(): userdata
+        self.settingsRoot = root:list('Settings', {"playersManagerSettings"}, "Manage settings of players kill manager script")
+        -- self.settingsRoot:toggle("Debug", {"playersManagerDebug"}, "Enable debug of players kill manager script", || -> self:toggleDebug(), self.debug)
+        self.settingsRoot:toggle("Only me", {"playersManagerOnlyMe"}, "Only log kill of yourself", || -> self:toggleOnlyMe(), self.onlyMe)
+        self.settingsRoot:toggle("Enable delete button", {"playersManagerEnableDeleteButton"}, "Enable delete button", || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
+        self.debug = false
+        self.onlyMe = false
+        self.enableDeleteButton = false
+    end
+
+    function toggleDebug(): void
+        self.debug = not self.debug
+    end
+
+    function getDebug(): bool
+        return self.debug
+    end
+
+    function toggleOnlyMe(): void
+        self.onlyMe = not self.onlyMe
+    end
+
+    function getOnlyMe(): bool
+        return self.onlyMe
+    end
+
+    function toggleEnableDeleteButton(): void
+        self.enableDeleteButton = not self.enableDeleteButton
+    end
+
+    function getEnableDeleteButton(): bool
+        return self.enableDeleteButton
+    end
+end
+
+local settingsManager = pluto_new SettingsManager()
+
 pluto_class EventManager
     function __construct(): userdata
         self.events = {}
@@ -144,12 +182,20 @@ local eventManager = pluto_new EventManager()
 
 -- Kill class
 pluto_class Kill
-    function __construct(killRoot, victim: userdata, killer: userdata, weaponHash: int, damages: userdata): userdata
-        self.killRoot = killRoot
+    function __construct(killRootParent: userdata, victim: userdata, killer: userdata, weaponHash: int, damages: userdata): userdata
+        self.killRoot = menu.shadow_root():list(killer:getPlayerName() .. " > " .. victim:getPlayerName(), {}, "", || -> self:addOrRemoveDeleteAction())
+        local firstParentChild = killRootParent:getChildren()[1]
+        if firstParentChild ~= nil then
+            self.killRoot = menu.attach_before(firstParentChild, self.killRoot)
+        else
+            self.killRoot = killRootParent:attach(self.killRoot)
+        end
         self.victim = victim
         self.killer = killer
         self.weaponHash = weaponHash
         self.damages = damages
+        self.deleteAction = nil
+        self.linkList = {}
 
         notificationsManager:notifyKill(self.victim, self.killer, self:getWeaponName())
 
@@ -174,11 +220,30 @@ pluto_class Kill
         end
         killRoot:toggle("Killer god mode", {}, "", function() end, self.killer:isInGodMode())
         local damagesRoot = killRoot:list("Damage infos", {}, "damage infos")
+        self:addOrRemoveDeleteAction()
         util.execute_in_os_thread(function()
             for self.damages as damage do
                 damage:populateRoot(damagesRoot)
             end
         end)
+    end
+
+    function addOrRemoveDeleteAction(): void
+        if settingsManager:getEnableDeleteButton() then
+            if(self.deleteAction==nil) then
+                self.deleteAction = self.killRoot:action("Delete", {}, "", function() self:destroy() end, function() end)
+            end
+        else
+            if(self.deleteAction~=nil) then
+                self.deleteAction:delete()
+                self.deleteAction = nil
+            end
+        end
+    end
+
+    function getKillRoot(): userdata
+        -- Get kill root
+        return self.killRoot
     end
 
     function getVictim(): userdata
@@ -204,6 +269,26 @@ pluto_class Kill
     function isKiller(killer: userdata): bool
         -- Check if killer is equal to the player
         return self.killer == killer:getPlayerId()
+    end
+
+    function link(root: userdata)
+        -- Link root to kill root
+        local link = menu.shadow_root():link(self.killRoot)
+        local firstChild = root:getChildren()[1]
+        if firstChild ~= nil then
+            link = menu.attach_before(firstChild, link)
+        else
+            link = root:attach(link)
+        end
+        self.linkList[#self.linkList + 1] = link
+    end
+
+    function destroy(): void
+        -- Delete kill
+        self.killRoot:delete()
+        for self.linkList as link do
+            link:delete()
+        end
     end
 
     function getWeaponName(): string
@@ -337,7 +422,6 @@ pluto_class Player
         -- write damage in the good order
         local killer;
         local victim;
-        local separator = " > ";
         if isKiller then
             killer = self
             victim = otherPlayer
@@ -354,7 +438,6 @@ pluto_class Player
         -- write kill in the good order
         local killer;
         local victim;
-        local separator = " > ";
         if isKiller then
             killer = self
             victim = otherPlayer
@@ -362,20 +445,15 @@ pluto_class Player
             killer = otherPlayer
             victim = self
         end
-
-        -- Create kill root
-        local playerKillsKillRoot = self.playerKillsRoot:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
-        local playerKillsKillRootInStand = self.playerKillsRootInStand:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
         -- Create kill
-        local kill = pluto_new Kill(playerKillsKillRoot, victim, killer, weaponHash, self.damageBeforeDeath)
+        local kill = pluto_new Kill(self.playerKillsRoot, victim, killer, weaponHash, self.damageBeforeDeath)
 
         -- Populate all kills root only if killer to avoid duplicate
         if isKiller then
-            local allKillsKillRoot = allKillsRoot:list(killer:getPlayerName() .. separator .. victim:getPlayerName())
-            kill:populateKillRoot(allKillsKillRoot)
+            kill:link(allKillsRoot)
         end
         -- Populate player kills root in player tabs
-        kill:populateKillRoot(playerKillsKillRootInStand)
+        kill:link(self.playerKillsRootInStand)
 
         -- Remember kill
         self.kills[#self.kills + 1] = kill
@@ -472,6 +550,10 @@ pluto_class PlayersManager
             if attackerId ~= -1 and victimId ~= -1 then
                 local killer = self:getPlayer(attackerId)
                 local victim = self:getPlayer(victimId)
+                -- Ignore kill if settings only me is enabled and killer or victim are not me
+                if settingsManager:getOnlyMe() and not killer:isMe() and not victim:isMe() then
+                    return
+                end
                 if victimDestroyed == 1 then
                     if(killer:equal(victim)) then
                         killer:addPlayerKill(victim, weaponUsedHash, damage, true)
