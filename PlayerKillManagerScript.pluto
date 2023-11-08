@@ -142,6 +142,17 @@ t:register('reload.description', Lang.ENGLISH, 'Reload players kill manager scri
 
 t:register('killedWith', Lang.ENGLISH, '%player1% killed %player2% with %weapon%')
 
+t:register('aboveMap', Lang.ENGLISH, 'above map')
+t:register('console', Lang.ENGLISH, 'console')
+t:register('consoleDefault', Lang.ENGLISH, 'console + default')
+t:register('file', Lang.ENGLISH, 'file')
+t:register('web', Lang.ENGLISH, 'web')
+t:register('chat', Lang.ENGLISH, 'chat')
+t:register('chatTeam', Lang.ENGLISH, 'chat team')
+t:register('default', Lang.ENGLISH, 'default')
+t:register('logger', Lang.ENGLISH, 'logger')
+t:register('all', Lang.ENGLISH, 'all')
+
 --- Commands
 t:register('commands.allKills', Lang.ENGLISH, 'allKills')
 t:register('commands.playersKillList', Lang.ENGLISH, 'playersKillList')
@@ -156,6 +167,95 @@ t:register('commands.playersManagerOnlyMe', Lang.ENGLISH, 'playersManagerOnlyMe'
 t:register('commands.playersManagerEnableDeleteButton', Lang.ENGLISH, 'playersManagerEnableDeleteButton')
 t:register('commands.kills', Lang.ENGLISH, 'kills')
 t:register('commands.playerKills', Lang.ENGLISH, 'playerKills')
+
+-- Spanish
+--- Usefull
+t:register('goToPlayerTabs', Lang.SPANISH, 'Ir a las pestañas de los jugadores')
+t:register('killRoot', Lang.SPANISH, '%player1% > %player2%')
+
+--- Notifications
+t:register('notifications', Lang.SPANISH, 'Notificaciones')
+t:register('notifications.description', Lang.SPANISH, 'Gestionar las notificaciones de los jugadores que matan')
+t:register('enabled', Lang.SPANISH, 'Activado')
+t:register('enabled.description', Lang.SPANISH, 'Activar las notificaciones de los jugadores que matan')
+t:register('enabledOnGettingKilled', Lang.SPANISH, 'Activado al morir')
+t:register('enabledOnGettingKilled.description', Lang.SPANISH, 'Habilitar las notificaciones de los jugadores al ser asesinado')
+t:register('enabledOnKilling', Lang.SPANISH, 'Activar al matar')
+t:register('enabledOnKilling.description', Lang.SPANISH, 'Habilita las notificaciones cuando matas a otra persona')
+t:register('enableOnOtherKilling', Lang.SPANISH, 'Activar cuando otra persona mate')
+t:register('enableOnOtherKilling.description', Lang.SPANISH, 'Habilita las notificaciones cuando un jugador mate a otra persona')
+t:register('notificationChannel', Lang.SPANISH, 'Canal de notificacion')
+t:register('notificationChannel.description', Lang.SPANISH, 'Canal de notificacion')
+
+--- Kills
+t:register('allKills', Lang.SPANISH, 'Todas las muertes')
+t:register('allKills.description', Lang.SPANISH, 'Todas las muertes entre jugadores')
+t:register('kills', Lang.SPANISH, 'Kills')
+t:register('kills.description', Lang.SPANISH, 'Gestionar kills de jugadores')
+t:register('allKillsOf', Lang.SPANISH, 'Todas las kills de %player%')
+t:register('killsListOf', Lang.SPANISH, 'Lista de todas las Kills de %player%')
+t:register('playerKills', Lang.SPANISH, '%player% kills')
+
+t:register('killedAt', Lang.SPANISH, 'Lo ha matado a las: %date%')
+t:register('victim', Lang.SPANISH, 'Victima: %player%')
+t:register('killer', Lang.SPANISH, 'Asesino: %player%')
+t:register('weapon', Lang.SPANISH, 'Arma: %weapon%')
+t:register('killerCar', Lang.SPANISH, 'Coche asesino: %vehicle%')
+t:register('victimCar', Lang.SPANISH, 'Victima del atropellamiento: %vehicle%')
+t:register('killerGodMode', Lang.SPANISH, 'Asesino en God Mode (Modo Dios)')
+-- Aqui pa' arriba ya ta
+--- Damages
+t:register('damageInfos', Lang.SPANISH, 'Informacion del Daño')
+t:register('damageInfos.description', Lang.SPANISH, 'Ver informacion del daño de la kill')
+t:register('from', Lang.SPANISH, 'De: %player%')
+t:register('to', Lang.SPANISH, 'A: %player%')
+t:register('damageAmount', Lang.SPANISH, 'Cantidad de daño: %damage%')
+t:register('damageRoot', Lang.SPANISH, '%player1% > %player2% : %damage%')
+
+--- Players
+t:register('playersList', Lang.SPANISH, 'Lista de jugadores')
+t:register('playersList.description', Lang.SPANISH, 'Gestionar jugadores de la lista')
+
+--- Settings
+t:register('settings', Lang.SPANISH, 'Configuracion')
+t:register('settings.description', Lang.SPANISH, 'Gestionar la configuración de los jugadores al matar')
+t:register('debug', Lang.SPANISH, 'Debug')
+t:register('debug.description', Lang.SPANISH, 'Habilitar la depuración de los jugadores al matar')
+t:register('onlyMe', Lang.SPANISH, 'Solo yo')
+t:register('onlyMe.description', Lang.SPANISH, 'Solo registrar cuando te matan')
+t:register('enableDeleteButton', Lang.SPANISH, 'Activar el botón de suprimirn')
+t:register('enableDeleteButton.description', Lang.SPANISH, 'Activar el botón de suprimir')
+t:register('reload', Lang.SPANISH, 'Recargar Script')
+t:register('reload.description', Lang.SPANISH, 'Recarga el script')
+
+t:register('killedWith', Lang.SPANISH, '%player1% asesinado %player2% con %weapon%')
+
+t:register('aboveMap', Lang.SPANISH, 'Mapa superior')
+t:register('console', Lang.SPANISH, 'consola')
+t:register('consoleDefault', Lang.SPANISH, 'consola + predeterminado')
+t:register('file', Lang.SPANISH, 'archivo')
+t:register('web', Lang.SPANISH, 'web')
+t:register('chat', Lang.SPANISH, 'chat')
+t:register('chatTeam', Lang.SPANISH, 'chat de equipo')
+t:register('default', Lang.SPANISH, 'predeterminado')
+t:register('logger', Lang.SPANISH, 'registrador')
+t:register('all', Lang.SPANISH, 'todo')
+
+--- Commands
+t:register('commands.allKills', Lang.SPANISH, 'TodaslasKills')
+t:register('commands.playersKillList', Lang.SPANISH, 'ListadeKillsdeJugadores')
+t:register('commands.playersManager', Lang.SPANISH, 'Gestionarjugadores')
+t:register('commands.playersManagerNotifications', Lang.SPANISH, 'GestionarNotificacionesdejugadores')
+t:register('commands.playersManagerEnableNotifications', Lang.SPANISH, 'HabilitarNotificaciones')
+t:register('commands.playersManagerEnableNotificationsOnGettingKilled', Lang.SPANISH, 'Habilitarnotificacionesalsereliminado')
+-- PARA BAJO NO ESTA TRADUCIDO
+t:register('commands.playersManagerEnableNotificationsOnKilling', Lang.SPANISH, 'Habilitarnotificacionesalmatar')
+t:register('commands.playersManagerEnableNotificationsOnOtherKilling', Lang.SPANISH, 'Habilitarnotificacionescuandomatanaalguien')
+t:register('commands.playersManagerSettings', Lang.SPANISH, 'Configuracion')
+t:register('commands.playersManagerOnlyMe', Lang.SPANISH, 'Gestionar Jugadores OnlyMe')
+t:register('commands.playersManagerEnableDeleteButton', Lang.SPANISH, 'Habilitarbotondesuprimir')
+t:register('commands.kills', Lang.SPANISH, 'kills')
+t:register('commands.playerKills', Lang.SPANISH, 'Killsdejugadores')
 
 -- Notifications manager
 pluto_class NotificationsManager
@@ -176,16 +276,16 @@ pluto_class NotificationsManager
         self.root:toggle(t:translate('enabledOnKilling'), {t:translate('commands.playersManagerEnableNotificationsOnKilling')}, t:translate('enabledOnKilling.description'), || -> self:toggleOnKilling(), self.enabledOnKilling)
         self.root:toggle(t:translate('enableOnOtherKilling'), {t:translate('commands.playersManagerEnableNotificationsOnOtherKilling')}, t:translate('enableOnOtherKilling.description'), || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
         self.root:list_select(t:translate('notificationChannel'), {}, "", {
-            [TOAST_ABOVE_MAP] = {"above map"},
-            [TOAST_CONSOLE] = {"console"},
-            [TOAST_CONSOLE+TOAST_DEFAULT] = {"console + default"},
-            [TOAST_FILE] = {"file"},
-            [TOAST_WEB] = {"web"},
-            [TOAST_CHAT] = {"chat"},
-            [TOAST_CHAT_TEAM] = {"chat team"},
-            [TOAST_DEFAULT] = {"default"},
-            [TOAST_LOGGER] = {"logger"},
-            [TOAST_ALL] = {"all"},
+            [TOAST_ABOVE_MAP] = {t:translate('aboveMap')},
+            [TOAST_CONSOLE] = {t:translate('console')},
+            [TOAST_CONSOLE+TOAST_DEFAULT] = {t:translate('consoleDefault')},
+            [TOAST_FILE] = {t:translate('file')},
+            [TOAST_WEB] = {t:translate('web')},
+            [TOAST_CHAT] = {t:translate('chat')},
+            [TOAST_CHAT_TEAM] = {t:translate('chatTeam')},
+            [TOAST_DEFAULT] = {t:translate('default')},
+            [TOAST_LOGGER] = {t:translate('logger')},
+            [TOAST_ALL] = {t:translate('all')},
         }, self.toastMode, |value|-> self:setToastMode(value))
     end
 
@@ -528,6 +628,7 @@ pluto_class Player
         self.damageBeforeDeath = {}
         self.playersManager = playersManager
         self.kills = {}
+        self.playerKillsRoot = nil
         self:populateRoot()
 	end
 
@@ -540,6 +641,7 @@ pluto_class Player
             kill:destroy()
         end
         self.kills = {}
+        self:populateRoot()
     end
 
     function getPlayerId(): int
