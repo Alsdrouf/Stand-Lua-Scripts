@@ -605,7 +605,7 @@ pluto_class Damage
         rootList:action(t:translate('from', {player = self.fromPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
         rootList:action(t:translate('to', {player = self.toPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
         rootList:action(t:translate('weapon', {weapon = self:getWeaponName()}), {}, "", function() end, function() end)
-        rootList:action(t:translate('damageAmount', {damage = self.damageAmount}), {}, "", function() end, function() end)
+        rootList:action(t:translate('damageAmount', {damage = string.format("%.2f", self.damageAmount)}), {}, "", function() end, function() end)
     end
 
     function getWeaponName(): string
