@@ -115,6 +115,7 @@ t:register('weapon', Lang.ENGLISH, 'Weapon: %weapon%')
 t:register('killerCar', Lang.ENGLISH, 'Killer car: %vehicle%')
 t:register('victimCar', Lang.ENGLISH, 'Victim car: %vehicle%')
 t:register('killerGodMode', Lang.ENGLISH, 'Killer god mode')
+t:register('delete', Lang.ENGLISH, 'Delete')
 
 --- Damages
 t:register('damageInfos', Lang.ENGLISH, 'Damage infos')
@@ -203,6 +204,7 @@ t:register('weapon', Lang.SPANISH, 'Arma: %weapon%')
 t:register('killerCar', Lang.SPANISH, 'Coche asesino: %vehicle%')
 t:register('victimCar', Lang.SPANISH, 'Victima del atropellamiento: %vehicle%')
 t:register('killerGodMode', Lang.SPANISH, 'Asesino en God Mode (Modo Dios)')
+t:register('delete', Lang.SPANISH, 'Suprimir')
 -- Aqui pa' arriba ya ta
 --- Damages
 t:register('damageInfos', Lang.SPANISH, 'Informacion del Daño')
