@@ -280,7 +280,7 @@ pluto_class MenuWrapper
     end
 
     function shadow_root(): userdata
-        return self:build(menu.shadow_root())
+        return self:build(menu.shadow_root(), 'shadowRoot')
     end
 
     function callTransform(menu_name, command_names, help_text, options): void
@@ -350,18 +350,15 @@ pluto_class MenuWrapper
 
     function attach(otherRoot): userdata
         try
-            util.toast(dumpvar(otherRoot:getRoot()))
-            otherRoot:setRoot(self.root:attach(otherRoot:getRoot()))
+        otherRoot:setRoot(self.root:attach(otherRoot:getRoot()))
         catch e then
-            util.toast(e)
-            -- util.toast(dumpvar(self.root))
-            -- util.toast(dumpvar(otherRoot:getRoot()))
+            util.toast(dumpvar(otherRoot.menu_name_key))
         end
-        return otherRoot
+        return self
     end
 
     function attachBefore(otherRoot): userdata
-        self.root = menu.attach_before(otherRoot, self.root)
+        otherRoot:setRoot(self.root:attach_before(otherRoot:getRoot()))
         return self
     end
 
@@ -385,8 +382,7 @@ pluto_class MenuWrapper
     end
 
     function link(otherRoot): userdata
-        self.root:link(otherRoot:getRoot())
-        return self
+        return self:build(self.root:link(otherRoot:getRoot()))
     end
 
     function delete(): void
@@ -620,9 +616,9 @@ pluto_class Kill
         self.killRoot = root:shadow_root():list({'killRoot', {player1 = killer:getPlayerName(), player2 = victim:getPlayerName()}}, {}, "", || -> self:addOrRemoveDeleteAction())
         local firstParentChild = killRootParent:getChildren()[1]
         if firstParentChild ~= nil then
-            self.killRoot:attachBefore(firstParentChild)
+            firstParentChild:attachBefore(self.killRoot)
         else
-            -- self.killRoot = killRootParent:attach(self.killRoot)
+            killRootParent:attach(self.killRoot)
         end
         self.victim = victim
         self.killer = killer
@@ -710,7 +706,7 @@ pluto_class Kill
         local link = root:shadow_root():link(self.killRoot)
         local firstChild = root:getChildren()[1]
         if firstChild ~= nil then
-            link:attachBefore(firstChild)
+            firstChild:attachBefore(link)
         else
             root:attach(link)
         end
