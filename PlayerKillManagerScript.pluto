@@ -349,7 +349,14 @@ pluto_class MenuWrapper
     end
 
     function attach(otherRoot): userdata
-        otherRoot:setRoot(self.root:attach(otherRoot:getRoot()))
+        try
+            util.toast(dumpvar(otherRoot:getRoot()))
+            otherRoot:setRoot(self.root:attach(otherRoot:getRoot()))
+        catch e then
+            util.toast(e)
+            -- util.toast(dumpvar(self.root))
+            -- util.toast(dumpvar(otherRoot:getRoot()))
+        end
         return otherRoot
     end
 
@@ -615,7 +622,7 @@ pluto_class Kill
         if firstParentChild ~= nil then
             self.killRoot:attachBefore(firstParentChild)
         else
-            self.killRoot = killRootParent:attach(self.killRoot)
+            -- self.killRoot = killRootParent:attach(self.killRoot)
         end
         self.victim = victim
         self.killer = killer
