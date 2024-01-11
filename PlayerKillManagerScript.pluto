@@ -44,7 +44,7 @@ pluto_class Translation
     end
 
     function _translate(key: string, lang: string, params): string
-        if not lang in self.translations or not key in self.translations[lang] then
+        if self.translations[lang] == nil or self.translations[lang][key] == nil then
             if lang == self.fallback then
                 util.toast('Missing translation key : ' .. key)
                 return key
@@ -66,7 +66,7 @@ pluto_class Translation
     end
 
     function register(key: string, lang: string, translation: string): void
-        if not lang in self.translations then
+        if self.translations[lang] == nil then
             self.translations[lang] = {}
         end
         self.translations[lang][key] = translation
