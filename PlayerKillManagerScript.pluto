@@ -2,7 +2,6 @@ util.require_natives('2944b')
 
 local CEventNetworkEntityDamage = 186
 
-local root <const> = menu.my_root()
 local allKillsRoot
 local playersRoot
 local notificationsManager
@@ -84,6 +83,11 @@ local t = pluto_new Translation(Lang.ENGLISH, Lang.ENGLISH)
 --- Usefull
 t:register('goToPlayerTabs', Lang.ENGLISH, 'Go to player tabs')
 t:register('killRoot', Lang.ENGLISH, '%player1% > %player2%')
+t:register('scriptName', Lang.ENGLISH, SCRIPT_NAME)
+t:register('language', Lang.ENGLISH, 'Language')
+t:register('language.description', Lang.ENGLISH, 'Set languages')
+t:register('english', Lang.ENGLISH, 'English')
+t:register('spanishCastilian', Lang.ENGLISH, 'Spanish (Castilian)')
 
 --- Notifications
 t:register('notifications', Lang.ENGLISH, 'Notifications')
@@ -168,6 +172,7 @@ t:register('commands.playersManagerOnlyMe', Lang.ENGLISH, 'playersManagerOnlyMe'
 t:register('commands.playersManagerEnableDeleteButton', Lang.ENGLISH, 'playersManagerEnableDeleteButton')
 t:register('commands.kills', Lang.ENGLISH, 'kills')
 t:register('commands.playerKills', Lang.ENGLISH, 'playerKills')
+t:register('commands.playersManagerLang', Lang.ENGLISH, 'playersManagerLang')
 
 -- Spanish
 --- Usefull
@@ -259,6 +264,161 @@ t:register('commands.playersManagerEnableDeleteButton', Lang.SPANISH_CASTILIAN, 
 t:register('commands.kills', Lang.SPANISH_CASTILIAN, 'kills')
 t:register('commands.playerKills', Lang.SPANISH_CASTILIAN, 'Killsdejugadores')
 
+-- MenuWrapper
+pluto_class MenuWrapper
+    function __construct(root, menu_name_key, command_names_key, help_text_key, options_key, transform_menu_name, transform_command_names, transform_help_text, transform_options): userdata
+        self.root = root
+        self.transform_menu_name = transform_menu_name
+        self.transform_command_names = transform_command_names
+        self.transform_help_text = transform_help_text
+        self.transform_options = transform_options
+        self.menu_name_key = menu_name_key
+        self.command_names_key = command_names_key
+        self.help_text_key = help_text_key
+        self.options_key = options_key
+        self.commandsRefs = {}
+    end
+
+    function shadow_root(): userdata
+        return self:build(menu.shadow_root(), 'shadowRoot')
+    end
+
+    function callTransform(menu_name, command_names, help_text, options): void
+        if self.transform_menu_name ~= nil and menu_name ~= "" and menu_name ~= nil then
+            menu_name = self.transform_menu_name(menu_name)
+        end
+        if self.transform_command_names ~= nil and type(command_names) == 'table' and table.getn(command_names) > 0 and command_names ~= nil then
+            command_names = self.transform_command_names(command_names)
+        end
+        if self.transform_help_text ~= nil and help_text ~= "" and help_text ~= nil then
+            help_text = self.transform_help_text(help_text)
+        end
+        if self.transform_options ~= nil and type(options) == 'table' and table.getn(options) > 0 and options ~= nil then
+            options = self.transform_options(options)
+        end
+        return menu_name, command_names, help_text, options
+    end
+
+    function build(commandRef, menu_name_key, command_names_key, help_text_key, options_key): userdata
+        return pluto_new MenuWrapper(commandRef, menu_name_key, command_names_key, help_text_key, options_key, self.transform_menu_name, self.transform_command_names, self.transform_help_text, self.transform_options)
+    end
+
+    function list(menu_name, command_names = {}, help_text = "", on_click = nil, on_back = nil, on_active_list_update = nil): userdata
+        menu_name_translated, command_names_translated, help_text_translated = self:callTransform(menu_name, command_names, help_text)
+        local list = self:build(self.root:list(menu_name_translated, command_names_translated, help_text_translated, on_click, on_back, on_active_list_update), menu_name, command_names, help_text)
+        self.commandsRefs[#self.commandsRefs + 1] = list
+        return list
+    end
+
+    function list_select(menu_name, command_names, help_text, options, default_value, on_change)
+        menu_name_translated, command_names_translated, help_text_translated, options_translated = self:callTransform(menu_name, command_names, help_text, options)
+        local list_select = self:build(self.root:list_select(menu_name_translated, command_names_translated, help_text_translated, options_translated, default_value, on_change), menu_name, command_names, help_text, options)
+        self.commandsRefs[#self.commandsRefs + 1] = list_select
+        return list_select
+    end
+
+    function toggle(menu_name, command_names, help_text, on_change, default_on = false)
+        menu_name_translated, command_names_translated, help_text_translated = self:callTransform(menu_name, command_names, help_text)
+        local toggle = self:build(self.root:toggle(menu_name_translated, command_names_translated, help_text_translated, on_change, default_on), menu_name, command_names, help_text)
+        self.commandsRefs[#self.commandsRefs + 1] = toggle
+        return toggle
+    end
+
+    function action(menu_name, command_names, help_text, on_click, on_command = nil, syntax = nil, perm = COMMANDPERM_USERONLY)
+        menu_name_translated, command_names_translated, help_text_translated = self:callTransform(menu_name, command_names, help_text)
+        local action = self:build(self.root:action(menu_name_translated, command_names_translated, help_text_translated, on_click, on_command, syntax, perm), menu_name, command_names, help_text)
+        self.commandsRefs[#self.commandsRefs + 1] = action
+        return action
+    end
+
+    function divider(key): userdata
+        divider_name = self.transform_menu_name(key)
+        self.root:divider(divider_name)
+    end
+
+    function getChildren(): userdata
+        return self.root:getChildren()
+    end
+
+    function getRoot(): userdata
+        return self.root
+    end
+
+    function setRoot(root): void
+        self.root = root
+    end
+
+    function attach(otherRoot): userdata
+        try
+        otherRoot:setRoot(self.root:attach(otherRoot:getRoot()))
+        catch e then
+            util.toast(dumpvar(otherRoot.menu_name_key))
+        end
+        return self
+    end
+
+    function attachBefore(otherRoot): userdata
+        otherRoot:setRoot(self.root:attach_before(otherRoot:getRoot()))
+        return self
+    end
+
+    function updateTranslations(): void
+        menu_name, command_names, help_text, options = self:callTransform(self.menu_name_key, self.command_names_key, self.help_text_key, self.options_key)
+        if menu_name ~= "" and menu_name ~= nil then
+            self.root.menu_name = menu_name
+        end
+        if type(command_names) == 'table' and table.getn(command_names) > 0 and command_names ~= nil then
+            self.root.command_names = command_names
+        end
+        if help_text ~= "" and help_text ~= nil then
+            self.root.help_text = help_text
+        end
+        if type(options) == 'table' and table.getn(options) > 0 then
+            self.root:setListActionOptions(options)
+        end
+        for self.commandsRefs as command do
+            command:updateTranslations()
+        end
+    end
+
+    function link(otherRoot): userdata
+        return self:build(self.root:link(otherRoot:getRoot()))
+    end
+
+    function delete(): void
+        for self.commandsRefs as command do
+            command:delete()
+        end
+        self.root:delete()
+    end
+end
+
+function translate(key: string): string
+    if type(key) == 'table' then
+        return t:translate(table.unpack(key))
+    else
+        return t:translate(key)
+    end
+end
+
+function translateCommand(keys)
+    local translatedKeys = {}
+    for keys as key do
+        translatedKeys[#translatedKeys + 1] = translate(key)
+    end
+    return translatedKeys
+end
+
+function translateOptions(keys)
+    local translatedKeys = {}
+    for key, value in pairs(keys) do
+        translatedKeys[key] = translate(value)
+    end
+    return translatedKeys
+end
+
+local root = pluto_new MenuWrapper(menu.my_root(), "", "", "", "", translate, translateCommand, translate, translateOptions)
+
 -- Notifications manager
 pluto_class NotificationsManager
     function __construct(): userdata
@@ -272,22 +432,22 @@ pluto_class NotificationsManager
     end
 
     function populateRoot(): void
-        self.root = root:list(t:translate('notifications'), {t:translate('commands.playersManagerNotifications')}, t:translate('notifications.description'))
-        self.root:toggle(t:translate('enabled'), {t:translate('commands.playersManagerEnableNotifications')}, t:translate('enabled.description'), || -> self:toggle(), self.enabled)
-        self.root:toggle(t:translate('enabledOnGettingKilled'), {t:translate('commands.playersManagerEnableNotificationsOnGettingKilled')}, t:translate('enabledOnGettingKilled.description'), || -> self:toggleOnGettingKilled(), self.enabledOnGettingKilled)
-        self.root:toggle(t:translate('enabledOnKilling'), {t:translate('commands.playersManagerEnableNotificationsOnKilling')}, t:translate('enabledOnKilling.description'), || -> self:toggleOnKilling(), self.enabledOnKilling)
-        self.root:toggle(t:translate('enableOnOtherKilling'), {t:translate('commands.playersManagerEnableNotificationsOnOtherKilling')}, t:translate('enableOnOtherKilling.description'), || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
-        self.root:list_select(t:translate('notificationChannel'), {}, "", {
-            [TOAST_ABOVE_MAP] = {t:translate('aboveMap')},
-            [TOAST_CONSOLE] = {t:translate('console')},
-            [TOAST_CONSOLE+TOAST_DEFAULT] = {t:translate('consoleDefault')},
-            [TOAST_FILE] = {t:translate('file')},
-            [TOAST_WEB] = {t:translate('web')},
-            [TOAST_CHAT] = {t:translate('chat')},
-            [TOAST_CHAT_TEAM] = {t:translate('chatTeam')},
-            [TOAST_DEFAULT] = {t:translate('default')},
-            [TOAST_LOGGER] = {t:translate('logger')},
-            [TOAST_ALL] = {t:translate('all')},
+        self.root = root:list('notifications', {'commands.playersManagerNotifications'}, 'notifications.description')
+        self.root:toggle('enabled', {'commands.playersManagerEnableNotifications'}, 'enabled.description', || -> self:toggle(), self.enabled)
+        self.root:toggle('enabledOnGettingKilled', {'commands.playersManagerEnableNotificationsOnGettingKilled'}, 'enabledOnGettingKilled.description', || -> self:toggleOnGettingKilled(), self.enabledOnGettingKilled)
+        self.root:toggle('enabledOnKilling', {'commands.playersManagerEnableNotificationsOnKilling'}, 'enabledOnKilling.description', || -> self:toggleOnKilling(), self.enabledOnKilling)
+        self.root:toggle('enableOnOtherKilling', {'commands.playersManagerEnableNotificationsOnOtherKilling'}, 'enableOnOtherKilling.description', || -> self:toggleOnOtherKilling(), self.enabledOnOtherKilling)
+        self.root:list_select('notificationChannel', {}, "", {
+            [TOAST_ABOVE_MAP] = {'aboveMap'},
+            [TOAST_CONSOLE] = {'console'},
+            [TOAST_CONSOLE+TOAST_DEFAULT] = {'consoleDefault'},
+            [TOAST_FILE] = {'file'},
+            [TOAST_WEB] = {'web'},
+            [TOAST_CHAT] = {'chat'},
+            [TOAST_CHAT_TEAM] = {'chatTeam'},
+            [TOAST_DEFAULT] = {'default'},
+            [TOAST_LOGGER] = {'logger'},
+            [TOAST_ALL] = {'all'},
         }, self.toastMode, |value|-> self:setToastMode(value))
     end
 
@@ -368,12 +528,12 @@ pluto_class SettingsManager
     end
 
     function populateRoot(): void
-        self.settingsRoot = root:list(t:translate('settings'), {t:translate('commands.playersManagerSettings')}, t:translate('settings.description'))
+        self.settingsRoot = root:list('settings', {'commands.playersManagerSettings'}, 'settings.description')
         -- self.settingsRoot:toggle("Debug", {"playersManagerDebug"}, "Enable debug of players kill manager script", || -> self:toggleDebug(), self.debug)
-        self.settingsRoot:toggle(t:translate('onlyMe'), {t:translate('commands.playersManagerOnlyMe')}, t:translate('onlyMe.description'), || -> self:toggleOnlyMe(), self.onlyMe)
-        self.settingsRoot:toggle(t:translate('enableDeleteButton'), {t:translate('commands.playersManagerEnableDeleteButton')}, t:translate('enableDeleteButton.description'), || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
-        self.settingsRoot:list_select('Language', {'playersManagerLang'}, "Set languages", {[Lang.ENGLISH] = {"English"}, [Lang.SPANISH_CASTILIAN] = {"Spanish (Castilian)"}}, self.language, |value|-> self:setLanguage(value))
-        self.settingsRoot:action(t:translate('reload'), {}, t:translate('reload.description'), || -> util.restart_script())
+        self.settingsRoot:toggle('onlyMe', {'commands.playersManagerOnlyMe'}, 'onlyMe.description', || -> self:toggleOnlyMe(), self.onlyMe)
+        self.settingsRoot:toggle('enableDeleteButton', {'commands.playersManagerEnableDeleteButton'}, 'enableDeleteButton.description', || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
+        self.settingsRoot:list_select('language', {'commands.playersManagerLang'}, 'language.description', {[Lang.ENGLISH] = {"english"}, [Lang.SPANISH_CASTILIAN] = {"spanishCastilian"}}, self.language, |value|-> self:setLanguage(value))
+        self.settingsRoot:action('reload', {}, 'reload.description', || -> util.restart_script())
     end
 
     function destroy(): void
@@ -453,12 +613,12 @@ end
 -- Kill class
 pluto_class Kill
     function __construct(killRootParent: userdata, victim: userdata, killer: userdata, weaponHash: int, damages: userdata): userdata
-        self.killRoot = menu.shadow_root():list(t:translate('killRoot', {player1 = killer:getPlayerName(), player2 = victim:getPlayerName()}), {}, "", || -> self:addOrRemoveDeleteAction())
+        self.killRoot = root:shadow_root():list({'killRoot', {player1 = killer:getPlayerName(), player2 = victim:getPlayerName()}}, {}, "", || -> self:addOrRemoveDeleteAction())
         local firstParentChild = killRootParent:getChildren()[1]
         if firstParentChild ~= nil then
-            self.killRoot = menu.attach_before(firstParentChild, self.killRoot)
+            firstParentChild:attachBefore(self.killRoot)
         else
-            self.killRoot = killRootParent:attach(self.killRoot)
+            killRootParent:attach(self.killRoot)
         end
         self.victim = victim
         self.killer = killer
@@ -476,20 +636,20 @@ pluto_class Kill
         -- Populate kill root with the infos
         local victimName = self.victim:getPlayerName()
         local killerName = self.killer:getPlayerName()
-        killRoot:action(t:translate('killedAt', {date = os.date("%H:%M:%S")}), {}, "", function() end, function() end)
-        killRoot:action(t:translate('victim', {player = victimName}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. victimName) end, function() end)
-        killRoot:action(t:translate('killer', {player = killerName}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. killerName) end, function() end)
-        killRoot:action(t:translate('weapon', {weapon = self:getWeaponName()}), {}, "", function() end, function() end)
+        killRoot:action({'killedAt', {date = os.date("%H:%M:%S")}}, {}, "", function() end, function() end)
+        killRoot:action({'victim', {player = victimName}}, {}, 'goToPlayerTabs', function() menu.trigger_commands('p ' .. victimName) end, function() end)
+        killRoot:action({'killer', {player = killerName}}, {}, 'goToPlayerTabs', function() menu.trigger_commands('p ' .. killerName) end, function() end)
+        killRoot:action({'weapon', {weapon = self:getWeaponName()}}, {}, "", function() end, function() end)
         local killerVehicle = self.killer:getPlayerCarName()
         if(killerVehicle~=nil) then
-            killRoot:action(t:translate('killerCar', {vehicle = killerVehicle}), {}, "", function() end, function() end)
+            killRoot:action({'killerCar', {vehicle = killerVehicle}}, {}, "", function() end, function() end)
         end
         local victimVehicle = self.victim:getPlayerCarName()
         if(victimVehicle~=nil) then
-            killRoot:action(t:translate('victimCar', {vehicle = victimVehicle}), {}, "", function() end, function() end)
+            killRoot:action({'victimCar', {vehicle = victimVehicle}}, {}, "", function() end, function() end)
         end
-        killRoot:toggle(t:translate('killerGodMode'), {}, "", function() end, self.killer:isInGodMode())
-        local damagesRoot = killRoot:list(t:translate('damageInfos'), {}, t:translate('damageInfos.description'))
+        killRoot:toggle('killerGodMode', {}, "", function() end, self.killer:isInGodMode())
+        local damagesRoot = killRoot:list('damageInfos', {}, 'damageInfos.description')
         self:addOrRemoveDeleteAction()
         util.execute_in_os_thread(function()
             for self.damages as damage do
@@ -501,7 +661,7 @@ pluto_class Kill
     function addOrRemoveDeleteAction(): void
         if settingsManager:getEnableDeleteButton() then
             if(self.deleteAction==nil) then
-                self.deleteAction = self.killRoot:action(t:translate('delete'), {}, "", function() self:destroy() end, function() end)
+                self.deleteAction = self.killRoot:action('delete', {}, "", function() self:destroy() end, function() end)
             end
         else
             if(self.deleteAction~=nil) then
@@ -543,12 +703,12 @@ pluto_class Kill
 
     function link(root: userdata)
         -- Link root to kill root
-        local link = menu.shadow_root():link(self.killRoot)
+        local link = root:shadow_root():link(self.killRoot)
         local firstChild = root:getChildren()[1]
         if firstChild ~= nil then
-            link = menu.attach_before(firstChild, link)
+            firstChild:attachBefore(link)
         else
-            link = root:attach(link)
+            root:attach(link)
         end
         self.linkList[#self.linkList + 1] = link
     end
@@ -603,11 +763,11 @@ pluto_class Damage
     end
 
     function populateRoot(root: userdata): void
-        local rootList = root:list(t:translate('damageRoot', {player1 = self.fromPlayer:getPlayerName(), player2 = self.toPlayer:getPlayerName(), damage = string.format("%.2f", self.damageAmount)}), {}, t:translate('damageInfos'))
-        rootList:action(t:translate('from', {player = self.fromPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
-        rootList:action(t:translate('to', {player = self.toPlayer:getPlayerName()}), {}, t:translate('goToPlayerTabs'), function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
-        rootList:action(t:translate('weapon', {weapon = self:getWeaponName()}), {}, "", function() end, function() end)
-        rootList:action(t:translate('damageAmount', {damage = string.format("%.2f", self.damageAmount)}), {}, "", function() end, function() end)
+        local rootList = root:list({'damageRoot', {player1 = self.fromPlayer:getPlayerName(), player2 = self.toPlayer:getPlayerName(), damage = string.format("%.2f", self.damageAmount)}}, {}, 'damageInfos')
+        rootList:action({'from', {player = self.fromPlayer:getPlayerName()}}, {}, 'goToPlayerTabs', function() menu.trigger_commands('p ' .. self.fromPlayer:getPlayerName()) end, function() end)
+        rootList:action({'to', {player = self.toPlayer:getPlayerName()}}, {}, 'goToPlayerTabs', function() menu.trigger_commands('p ' .. self.toPlayer:getPlayerName()) end, function() end)
+        rootList:action({'weapon', {weapon = self:getWeaponName()}}, {}, "", function() end, function() end)
+        rootList:action({'damageAmount', {damage = string.format("%.2f", self.damageAmount)}}, {}, "", function() end, function() end)
     end
 
     function getWeaponName(): string
@@ -635,7 +795,13 @@ pluto_class Player
 	end
 
     function populateRoot(): void
-        self.playerKillsRoot = playersRoot:list(t:translate('playerKills', {player = self:getPlayerName()}), {t:translate('commands.playerKills', {player = self:getPlayerName()})}, t:translate('allKillsOf', {player = self:getPlayerName()}))
+        self.playerKillsRoot = playersRoot:list({'playerKills', {player = self:getPlayerName()}}, {{'commands.playerKills', {player = self:getPlayerName()}}}, {'allKillsOf', {player = self:getPlayerName()}})
+    end
+
+    function updateTranslations()
+        if self.playerKillsRoot ~= nil then
+            self.playerKillsRoot:updateTranslations()
+        end
     end
 
     function reload(): void
@@ -773,6 +939,12 @@ pluto_class PlayersManager
     function destroy()
     end
 
+    function updateTranslations()
+        for self.players as player do
+            player:updateTranslations()
+        end
+    end
+
     function reload()
         self:destroy()
         for self.players as player do
@@ -869,10 +1041,11 @@ pluto_class PlayersManager
 end
 
 function reload()
+    --[[
     local oldAllKillsRoot = allKillsRoot
-    allKillsRoot = root:list(t:translate('allKills'), {t:translate('commands.allKills')}, t:translate('allKills.description'))
+    allKillsRoot = root:list('allKills', {'commands.allKills'}, 'allKills.description')
     local oldPlayersRoot = playersRoot
-    playersRoot = root:list(t:translate('playersList'), {t:translate('commands.playersKillList')}, t:translate('playersList.description'))
+    playersRoot = root:list('playersList', {'commands.playersKillList'}, 'playersList.description')
 
     notificationsManager:reload()
     settingsManager:reload()
@@ -881,11 +1054,14 @@ function reload()
 
     oldAllKillsRoot:delete()
     oldPlayersRoot:delete()
+    --]]
+    playersManager:updateTranslations()
+    root:updateTranslations()
 end
 
 function init()
-    allKillsRoot = root:list(t:translate('allKills'), {t:translate('commands.allKills')}, t:translate('allKills.description'))
-    playersRoot = root:list(t:translate('playersList'), {t:translate('commands.playersKillList')}, t:translate('playersList.description'))
+    allKillsRoot = root:list('allKills', {'commands.allKills'}, 'allKills.description')
+    playersRoot = root:list('playersList', {'commands.playersKillList'}, 'playersList.description')
 
     -- Instantiate notifications manager / static instance
     notificationsManager = pluto_new NotificationsManager()
@@ -900,10 +1076,11 @@ function init()
     playersManager = pluto_new PlayersManager(players.list())
 
     -- Command builder to get player kills in player tabs
-    function commandBuilder(playerId: int, root)
+    function commandBuilder(playerId: int, playerRoot)
+        local playerRoot = pluto_new MenuWrapper(playerRoot, "", "", "", "", translate, translateCommand, translate, translateOptions)
         local player = playersManager:getPlayer(playerId)
-        root:divider(SCRIPT_NAME)
-        local killList = root:list(t:translate('kills'), {t:translate('commands.kills')}, t:translate('killsListOf', {player = player:getPlayerName()}))
+        playerRoot:divider('scriptName')
+        local killList = playerRoot:list('kills', {'commands.kills'}, {'killsListOf', {player = player:getPlayerName()}})
         player:setPlayerKillsRootInStand(killList)
         return true
     end
