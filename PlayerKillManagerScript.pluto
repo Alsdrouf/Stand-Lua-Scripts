@@ -75,7 +75,8 @@ end
 
 enum Lang begin
     ENGLISH,
-    SPANISH_CASTILIAN
+    SPANISH_CASTILIAN,
+    CHINESE
 end
 
 local t = pluto_new Translation(Lang.ENGLISH, Lang.ENGLISH)
@@ -259,6 +260,98 @@ t:register('commands.playersManagerEnableDeleteButton', Lang.SPANISH_CASTILIAN, 
 t:register('commands.kills', Lang.SPANISH_CASTILIAN, 'kills')
 t:register('commands.playerKills', Lang.SPANISH_CASTILIAN, 'Killsdejugadores')
 
+
+-- Chinese 
+--- Usefull
+t:register('goToPlayerTabs', Lang.CHINESE, '在玩家列表显示')
+t:register('killRoot', Lang.CHINESE, '%player1% > %player2%')
+
+--- Notifications
+t:register('notifications', Lang.CHINESE, '通知')
+t:register('notifications.description', Lang.CHINESE, '管理通知设定')
+t:register('enabled', Lang.CHINESE, '启用')
+t:register('enabled.description', Lang.CHINESE, '启用通知')
+t:register('enabledOnGettingKilled', Lang.CHINESE, '被击杀时通知')
+t:register('enabledOnGettingKilled.description', Lang.CHINESE, '开启被击杀时通知')
+t:register('enabledOnKilling', Lang.CHINESE, '击杀时通知')
+t:register('enabledOnKilling.description', Lang.CHINESE, '在击杀玩家时通知')
+t:register('enableOnOtherKilling', Lang.CHINESE, '他人击杀时通知')
+t:register('enableOnOtherKilling.description', Lang.CHINESE, '其他人击杀玩家时通知')
+t:register('notificationChannel', Lang.CHINESE, '通知方式')
+t:register('notificationChannel.description', Lang.CHINESE, '管理通知方式')
+
+
+--- Kills
+t:register('allKills', Lang.CHINESE, '击杀历史')
+t:register('allKills.description', Lang.CHINESE, '玩家之间的击杀记录')
+t:register('kills', Lang.CHINESE, '击杀')
+t:register('kills.description', Lang.CHINESE, '管理击杀')
+t:register('allKillsOf', Lang.CHINESE, '%player% 的全部击杀')
+t:register('killsListOf', Lang.CHINESE, '%player% 的击杀列表')
+t:register('playerKills', Lang.CHINESE, '%player% 的击杀')
+
+
+t:register('killedAt', Lang.CHINESE, '击杀时间: %date%')
+t:register('victim', Lang.CHINESE, '受害者: %player%')
+t:register('killer', Lang.CHINESE, '击杀者: %player%')
+t:register('weapon', Lang.CHINESE, '武器: %weapon%')
+t:register('killerCar', Lang.CHINESE, '击杀者载具: %vehicle%')
+t:register('victimCar', Lang.CHINESE, '受害者载具: %vehicle%')
+t:register('killerGodMode', Lang.CHINESE, '击杀者无敌')
+t:register('delete', Lang.CHINESE, '删除')
+
+--- Damages
+t:register('damageInfos', Lang.CHINESE, '伤害详情')
+t:register('damageInfos.description', Lang.CHINESE, '查看这次击杀的伤害详情')
+t:register('from', Lang.CHINESE, '从玩家: %player%')
+t:register('to', Lang.CHINESE, '到玩家: %player%')
+t:register('damageAmount', Lang.CHINESE, '伤害: %damage%')
+t:register('damageRoot', Lang.CHINESE, '%player1% > %player2% : %damage%')
+
+--- Players
+t:register('playersList', Lang.CHINESE, '玩家列表')
+t:register('playersList.description', Lang.CHINESE, '查看玩家列表')
+
+--- Settings
+t:register('settings', Lang.CHINESE, '设置')
+t:register('settings.description', Lang.CHINESE, '管理脚本设置')
+t:register('debug', Lang.CHINESE, '调试模式')
+t:register('debug.description', Lang.CHINESE, '启用调式模式')
+t:register('onlyMe', Lang.CHINESE, '只记录自己的击杀/被击杀')
+t:register('onlyMe.description', Lang.CHINESE, '只记录关于自己的击杀、被击杀记录')
+t:register('enableDeleteButton', Lang.CHINESE, '显示删除按钮')
+t:register('enableDeleteButton.description', Lang.CHINESE, '在击杀记录中显示删除按钮以供删除击杀记录')
+t:register('reload', Lang.CHINESE, '重新加载脚本')
+t:register('reload.description', Lang.CHINESE, '重新加载脚本')
+
+t:register('killedWith', Lang.CHINESE, '%player1% 使用 %weapon% 杀了 %player2%')
+
+t:register('aboveMap', Lang.CHINESE, '地图上方')
+t:register('console', Lang.CHINESE, '控制台')
+t:register('consoleDefault', Lang.CHINESE, '控制台 + 默认')
+t:register('file', Lang.CHINESE, '文件')
+t:register('web', Lang.CHINESE, 'web')
+t:register('chat', Lang.CHINESE, '聊天')
+t:register('chatTeam', Lang.CHINESE, '团队聊天')
+t:register('default', Lang.CHINESE, '默认')
+t:register('logger', Lang.CHINESE, '日志')
+t:register('all', Lang.CHINESE, '全部')
+
+--- Commands
+t:register('commands.allKills', Lang.CHINESE, 'allKills')
+t:register('commands.playersKillList', Lang.CHINESE, 'playersKillList')
+t:register('commands.playersManager', Lang.CHINESE, 'playersManager')
+t:register('commands.playersManagerNotifications', Lang.CHINESE, 'playersManagerNotifications')
+t:register('commands.playersManagerEnableNotifications', Lang.CHINESE, 'playersManagerEnableNotifications')
+t:register('commands.playersManagerEnableNotificationsOnGettingKilled', Lang.CHINESE, 'playersManagerEnableNotificationsOnGettingKilled')
+t:register('commands.playersManagerEnableNotificationsOnKilling', Lang.CHINESE, 'playersManagerEnableNotificationsOnKilling')
+t:register('commands.playersManagerEnableNotificationsOnOtherKilling', Lang.CHINESE, 'playersManagerEnableNotificationsOnOtherKilling')
+t:register('commands.playersManagerSettings', Lang.CHINESE, 'playersManagerSettings')
+t:register('commands.playersManagerOnlyMe', Lang.CHINESE, 'playersManagerOnlyMe')
+t:register('commands.playersManagerEnableDeleteButton', Lang.CHINESE, 'playersManagerEnableDeleteButton')
+t:register('commands.kills', Lang.CHINESE, 'kills')
+t:register('commands.playerKills', Lang.CHINESE, 'playerKills')
+
 -- Notifications manager
 pluto_class NotificationsManager
     function __construct(): userdata
@@ -372,7 +465,7 @@ pluto_class SettingsManager
         -- self.settingsRoot:toggle("Debug", {"playersManagerDebug"}, "Enable debug of players kill manager script", || -> self:toggleDebug(), self.debug)
         self.settingsRoot:toggle(t:translate('onlyMe'), {t:translate('commands.playersManagerOnlyMe')}, t:translate('onlyMe.description'), || -> self:toggleOnlyMe(), self.onlyMe)
         self.settingsRoot:toggle(t:translate('enableDeleteButton'), {t:translate('commands.playersManagerEnableDeleteButton')}, t:translate('enableDeleteButton.description'), || -> self:toggleEnableDeleteButton(), self.enableDeleteButton)
-        self.settingsRoot:list_select('Language', {'playersManagerLang'}, "Set languages", {[Lang.ENGLISH] = {"English"}, [Lang.SPANISH_CASTILIAN] = {"Spanish (Castilian)"}}, self.language, |value|-> self:setLanguage(value))
+        self.settingsRoot:list_select('Language', {'playersManagerLang'}, "Set languages", {[Lang.ENGLISH] = {"English"}, [Lang.SPANISH_CASTILIAN] = {"Spanish (Castilian)"}, [Lang.CHINESE] = {"Chinese (简体中文)"}}, self.language, |value|-> self:setLanguage(value))
         self.settingsRoot:action(t:translate('reload'), {}, t:translate('reload.description'), || -> util.restart_script())
     end
 
