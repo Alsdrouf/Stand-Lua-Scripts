@@ -284,10 +284,10 @@ t:register('notificationChannel.description', Lang.CHINESE, '管理通知方式'
 --- Kills
 t:register('allKills', Lang.CHINESE, '击杀历史')
 t:register('allKills.description', Lang.CHINESE, '玩家之间的击杀记录')
-t:register('kills', Lang.CHINESE, '击杀')
-t:register('kills.description', Lang.CHINESE, '管理击杀')
+t:register('kills', Lang.CHINESE, '击杀事件')
+t:register('kills.description', Lang.CHINESE, '管理击杀列表')
 t:register('allKillsOf', Lang.CHINESE, '%player% 的全部击杀')
-t:register('killsListOf', Lang.CHINESE, '%player% 的击杀列表')
+t:register('killsListOf', Lang.CHINESE, '%player% 的击杀事件')
 t:register('playerKills', Lang.CHINESE, '%player% 的击杀')
 
 
